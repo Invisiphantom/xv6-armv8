@@ -1,5 +1,6 @@
+
 ARCH := aarch64
-CROSS := aarch64-linux-gnu-
+# CROSS := aarch64-linux-gnu-
 CC := $(CROSS)gcc
 LD := $(CROSS)ld
 OBJDUMP := $(CROSS)objdump
@@ -28,14 +29,15 @@ COPY := cp -f
 # link the libgcc.a for __aeabi_idiv. ARM has no native support for div
 LIBS = $(LIBGCC)
 
-CORTEX_A53_FLAGS := -mcpu=cortex-a53 -mtune=cortex-a53
-CFLAGS := -Wall -g -O2 \
+CORTEX_A72_FLAGS := -mcpu=cortex-a72+nofp -mtune=cortex-a72
+CFLAGS := -Wall -g -O \
           -fno-pie -fno-pic -fno-stack-protector \
           -fno-zero-initialized-in-bss \
           -static -fno-builtin -nostdlib -nostdinc -ffreestanding -nostartfiles \
           -mgeneral-regs-only \
           -MMD -MP \
           $(CORTEX_A53_FLAGS) \
+		  -mlittle-endian -mcmodel=small -mno-outline-atomics \
           -Iinc -Ilibc/obj/include -Ilibc/arch/aarch64 -Ilibc/include
 
 ASFLAGS := -march=armv8-a
@@ -108,20 +110,21 @@ $(KERN_IMG): $(KERN_ELF)
 
 -include mksd.mk
 
-QEMU := qemu-system-aarch64 -M raspi3 -nographic -serial null -serial mon:stdio -drive file=$(SD_IMG),if=sd,format=raw
+QEMU := qemu-system-aarch64 -M raspi3b -nographic -serial null -serial mon:stdio -drive file=$(SD_IMG),if=sd,format=raw
 
 qemu: $(KERN_IMG) $(SD_IMG)
 	$(QEMU) -kernel $<
 
 qemu-gdb: $(KERN_IMG) $(SD_IMG)
-	$(QEMU) -kernel $< -S -gdb tcp::1234
+	@echo "> 现在可以启动gdb" 1>&2
+	$(QEMU) -kernel $< -S -gdb tcp::26011
 
 gdb: 
 	gdb-multiarch -n -x .gdbinit
 
 init:
 	git submodule update --init --recursive
-	(cd libc && export CROSS_COMPILE=$(CROSS) && ./configure --target=$(ARCH) && $(MAKE) -j5)
+	(cd libc && export CROSS_COMPILE=$(CROSS) && ./configure --target=$(ARCH) && $(MAKE) -j8)
 
 user:
 	(cd user && $(MAKE))

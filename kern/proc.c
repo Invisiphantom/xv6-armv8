@@ -30,9 +30,7 @@ extern void usertrapret(struct trapframe*);
 extern void trapret();
 void swtch(struct context**, struct context*);
 
-static int
-pid_next()
-{
+static int pid_next() {
     acquire(&pid_lock);
     int pid = nextpid++;
     release(&pid_lock);
@@ -42,9 +40,7 @@ pid_next()
 /*
  * Initialize the spinlock for ptable to serialize the access to ptable
  */
-void
-proc_init()
-{
+void proc_init() {
     initlock(&wait_lock, "wait_lock");
     initlock(&pid_lock, "pid_lock");
     for (struct proc* p = ptable.proc; p < &ptable.proc[NPROC]; ++p) {
@@ -58,18 +54,18 @@ proc_init()
  * including user pages.
  * p->lock must be held.
  */
-static void
-proc_free(struct proc* p)
-{
+static void proc_free(struct proc* p) {
     p->chan = NULL;
     p->killed = 0;
     p->xstate = 0;
     p->pid = 0;
     p->parent = NULL;
-    if (p->kstack) kfree(p->kstack);
+    if (p->kstack)
+        kfree(p->kstack);
     p->kstack = NULL;
     p->sz = 0;
-    if (p->pgdir) vm_free(p->pgdir, 4);
+    if (p->pgdir)
+        vm_free(p->pgdir, 4);
     p->pgdir = NULL;
     p->tf = NULL;
     p->name[0] = '\0';
@@ -82,9 +78,7 @@ proc_free(struct proc* p)
  * state required to run in the kernel.
  * Otherwise return 0.
  */
-static struct proc*
-proc_alloc()
-{
+static struct proc* proc_alloc() {
     for (struct proc* p = ptable.proc; p < &ptable.proc[NPROC]; ++p) {
         acquire(&p->lock);
         if (p->state != UNUSED) {
@@ -125,14 +119,13 @@ proc_alloc()
  * from the beginning of the user process determined
  * by uvm_init
  */
-void
-user_init()
-{
+void user_init() {
     extern char _binary_obj_user_initcode_start[];
     extern char _binary_obj_user_initcode_size[];
 
     struct proc* p = proc_alloc();
-    if (!p) panic("\tuser_init: process failed to allocate.\n");
+    if (!p)
+        panic("\tuser_init: process failed to allocate.\n");
     initproc = p;
 
     // Allocate a user page table.
@@ -141,9 +134,7 @@ user_init()
     p->sz = PGSIZE;
 
     // Copy initcode into the page table.
-    uvm_init(
-        p->pgdir, _binary_obj_user_initcode_start,
-        (uint64_t)_binary_obj_user_initcode_size);
+    uvm_init(p->pgdir, _binary_obj_user_initcode_start, (uint64_t)_binary_obj_user_initcode_size);
 
     // Set up trapframe to prepare for the first "return" from kernel to user.
     memset(p->tf, 0, sizeof(*p->tf));
@@ -169,9 +160,7 @@ user_init()
  *  - eventually that process transfers control
  *    via swtch back to the scheduler.
  */
-void
-scheduler()
-{
+void scheduler() {
     struct cpu* c = thiscpu;
     c->proc = NULL;
 
@@ -206,14 +195,14 @@ scheduler()
  * Enter scheduler. Must hold only p->lock
  * and have changed p->state.
  */
-void
-sched()
-{
+void sched() {
     struct cpu* c = thiscpu;
     struct proc* p = c->proc;
 
-    if (!holding(&p->lock)) panic("\tsched: process not locked.\n");
-    if (p->state == RUNNING) panic("\tsched: process running.\n");
+    if (!holding(&p->lock))
+        panic("\tsched: process not locked.\n");
+    if (p->state == RUNNING)
+        panic("\tsched: process running.\n");
 
     swtch(&p->context, c->scheduler);
 }
@@ -222,9 +211,7 @@ sched()
  * A fork child's very first scheduling by scheduler()
  * will swtch to forkret. "Return" to user space.
  */
-void
-forkret()
-{
+void forkret() {
     volatile static int first = 1;
     struct proc* p = thisproc();
     struct trapframe* tf = p->tf;
@@ -249,11 +236,11 @@ forkret()
  * Pass p's abandoned children to initproc.
  * Caller must hold wait_lock.
  */
-void
-reparent(struct proc* p)
-{
+void reparent(struct proc* p) {
     for (struct proc* pc = ptable.proc; pc < &ptable.proc[NPROC]; ++pc) {
-        if (pc->parent == p) { pc->parent = initproc; }
+        if (pc->parent == p) {
+            pc->parent = initproc;
+        }
     }
 }
 
@@ -262,12 +249,11 @@ reparent(struct proc* p)
  * An exited process remains in the zombie state
  * until its parent calls wait() to find out it exited.
  */
-void
-exit(int status)
-{
+void exit(int status) {
     struct proc* p = thisproc();
 
-    if (p == initproc) panic("\texit: initproc exiting.\n");
+    if (p == initproc)
+        panic("\texit: initproc exiting.\n");
 
     for (int fd = 0; fd < NOFILE; ++fd) {
         if (p->ofile[fd]) {
@@ -301,9 +287,7 @@ exit(int status)
  * Atomically release lock and sleep on chan.
  * Reacquires lock when awakened.
  */
-void
-sleep(void* chan, struct spinlock* lk)
-{
+void sleep(void* chan, struct spinlock* lk) {
     struct proc* p = thisproc();
 
     // Must acquire p->lock in order to
@@ -333,9 +317,7 @@ sleep(void* chan, struct spinlock* lk)
  * Wake up all processes sleeping on chan.
  * Must be called without any p->lock.
  */
-void
-wakeup(void* chan)
-{
+void wakeup(void* chan) {
     for (struct proc* p = ptable.proc; p < &ptable.proc[NPROC]; ++p) {
         if (p != thisproc()) {
             acquire(&p->lock);
@@ -350,9 +332,7 @@ wakeup(void* chan)
 /*
  * Give up the CPU for one scheduling round.
  */
-void
-yield()
-{
+void yield() {
     struct proc* p = thisproc();
     acquire(&p->lock);
     p->state = RUNNABLE;
@@ -365,15 +345,15 @@ yield()
  * Grow current process's memory by n bytes.
  * Return 0 on success, -1 on failure.
  */
-int
-growproc(int n)
-{
+int growproc(int n) {
     struct proc* p = thisproc();
     uint64_t sz = p->sz;
     if (n > 0) {
-        if (!(sz = uvm_alloc(p->pgdir, sz, sz + n))) return -1;
+        if (!(sz = uvm_alloc(p->pgdir, sz, sz + n)))
+            return -1;
     } else if (n < 0) {
-        if (!(sz = uvm_dealloc(p->pgdir, sz, sz + n))) return -1;
+        if (!(sz = uvm_dealloc(p->pgdir, sz, sz + n)))
+            return -1;
     }
     p->sz = sz;
     uvm_switch(p);
@@ -385,12 +365,11 @@ growproc(int n)
  * Sets up stack to return as if from system call.
  * Caller must set state of returned proc to RUNNABLE.
  */
-int
-fork()
-{
+int fork() {
     // Allocate process
     struct proc* np = proc_alloc();
-    if (!np) return -1;
+    if (!np)
+        return -1;
 
     struct proc* p = thisproc();
 
@@ -410,7 +389,8 @@ fork()
 
     // Increment reference counts on open file descriptors
     for (int i = 0; i < NOFILE; ++i) {
-        if (p->ofile[i]) np->ofile[i] = file_dup(p->ofile[i]);
+        if (p->ofile[i])
+            np->ofile[i] = file_dup(p->ofile[i]);
     }
     np->cwd = idup(p->cwd);
 
@@ -435,9 +415,7 @@ fork()
  * Wait for a child process to exit and return its pid.
  * Return -1 if this process has no children.
  */
-int
-wait()
-{
+int wait() {
     struct proc* p = thisproc();
     acquire(&wait_lock);
 
@@ -445,7 +423,8 @@ wait()
         // Scan through table looking for exited children.
         int havekids = 0;
         for (struct proc* np = ptable.proc; np < &ptable.proc[NPROC]; ++np) {
-            if (np->parent != p) continue;
+            if (np->parent != p)
+                continue;
             havekids = 1;
             if (np->state == ZOMBIE) {
                 // Found one.
@@ -471,21 +450,17 @@ wait()
  * Print a process listing to console. For debugging.
  * No lock to avoid wedging a stuck machine further.
  */
-void
-proc_dump()
-{
+void proc_dump() {
     static char* states[] = {
-        [UNUSED] "UNUSED  ",  [SLEEPING] "SLEEPING", [RUNNABLE] "RUNNABLE",
-        [RUNNING] "RUNNING ", [ZOMBIE] "ZOMBIE  ",
+        [UNUSED] "UNUSED  ", [SLEEPING] "SLEEPING", [RUNNABLE] "RUNNABLE", [RUNNING] "RUNNING ", [ZOMBIE] "ZOMBIE  ",
     };
 
     cprintf("\n====== PROCESS DUMP ======\n");
     for (struct proc* p = ptable.proc; p < &ptable.proc[NPROC]; ++p) {
-        if (p->state == UNUSED) continue;
+        if (p->state == UNUSED)
+            continue;
         char* state =
-            (p->state >= 0 && p->state < ARRAY_SIZE(states) && states[p->state])
-                ? states[p->state]
-                : "UNKNOWN ";
+            (p->state >= 0 && p->state < ARRAY_SIZE(states) && states[p->state]) ? states[p->state] : "UNKNOWN ";
         cprintf("[%s] %d (%s)\n", state, p->pid, p->name);
     }
     cprintf("====== DUMP END ======\n\n");
@@ -495,9 +470,7 @@ proc_dump()
  * Print the trap frame of a process to console. For debugging.
  * No lock to avoid wedging a stuck machine further.
  */
-void
-trapframe_dump(struct proc* p)
-{
+void trapframe_dump(struct proc* p) {
     cprintf("\n====== TRAP FRAME DUMP ======\n");
     cprintf("sp:\t%lld\n", p->tf->sp_el0);
     cprintf("spsr:\t%lld\n", p->tf->spsr_el1);
