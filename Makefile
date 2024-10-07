@@ -112,10 +112,13 @@ $(KERN_IMG): $(KERN_ELF)
 
 QEMU := qemu-system-aarch64 -M raspi3b -nographic -serial null -serial mon:stdio -drive file=$(SD_IMG),if=sd,format=raw
 
-qemu: $(KERN_IMG) $(SD_IMG)
+user:
+	(cd user && $(MAKE))
+
+qemu: $(KERN_IMG) $(SD_IMG) user
 	$(QEMU) -kernel $<
 
-qemu-gdb: $(KERN_IMG) $(SD_IMG)
+qemu-gdb: $(KERN_IMG) $(SD_IMG) user
 	@echo "> 现在可以启动gdb" 1>&2
 	$(QEMU) -kernel $< -S -gdb tcp::26011
 
@@ -125,9 +128,6 @@ gdb:
 init:
 	git submodule update --init --recursive
 	(cd libc && export CROSS_COMPILE=$(CROSS) && ./configure --target=$(ARCH) && $(MAKE) -j8)
-
-user:
-	(cd user && $(MAKE))
 
 clean:
 	$(MAKE) -C user clean

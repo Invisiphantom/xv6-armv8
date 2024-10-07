@@ -8,7 +8,6 @@ https://img.ethancao.cn/ARMv8%20Instruction.pdf
 git clone https://github.com/Invisiphantom/xv6-armv8.git
 sudo apt install -y binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu qemu-system-arm gdb-multiarch bear
 make init
-make user
 make qemu
 
 ```

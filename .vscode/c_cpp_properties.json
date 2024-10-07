@@ -1,0 +1,12 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "intelliSenseMode": "linux-gcc-arm64",
+            "compilerPath": "/usr/bin/aarch64-linux-gnu-gcc",
+            "includePath": ["${workspaceFolder}/**"],
+            "compileCommands": "${workspaceFolder}/.vscode/compile_commands.json"
+        }
+    ],
+    "version": 4
+}

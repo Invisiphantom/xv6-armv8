@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "xv6build",
+            "type": "shell",
+            "command": "make user -s && make qemu-gdb -s",
+            "isBackground": true,
+            "problemMatcher": [
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 1,
+                            "message": 1
+                        }
+                    ],
+                    "background": {
+                        "beginsPattern": ".", // 通过background的强制结束
+                        "endsPattern": ">" // 来提醒launch.json启动gdb
+                    }
+                }
+            ]
+        }
+    ]
+}

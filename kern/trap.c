@@ -14,8 +14,7 @@
 #include "timer.h"
 #include "uart.h"
 
-void
-irq_init()
+void irq_init()
 {
     clock_init();
     put32(ENABLE_IRQS_1, AUX_INT);
@@ -24,8 +23,7 @@ irq_init()
     cprintf("irq_init: success.\n");
 }
 
-void
-interrupt(struct trapframe* tf)
+void interrupt(struct trapframe* tf)
 {
     int src = get32(IRQ_SRC_CORE(cpuid()));
     if (src & IRQ_CNTPNSIRQ) {
@@ -43,22 +41,21 @@ interrupt(struct trapframe* tf)
         } else if (p2 & VC_ARASANSDIO_INT) {
             sd_intr();
         } else {
-            cprintf(
-                "interrupt: unexpected gpu intr p1 %x, p2 %x, sd %d, omitted.\n",
-                p1, p2, p2 & VC_ARASANSDIO_INT);
+            cprintf("interrupt: unexpected gpu intr p1 %x, p2 %x, sd %d, omitted.\n", p1, p2, p2 & VC_ARASANSDIO_INT);
         }
     } else {
         cprintf("interrupt: unexpected interrupt at CPU %d\n", cpuid());
     }
 }
 
-void
-trap(struct trapframe* tf)
+void trap(struct trapframe* tf)
 {
     int ec = resr() >> EC_SHIFT, iss = resr() & ISS_MASK;
-    lesr(0);  // Clear esr.
+    lesr(0); // Clear esr.
     switch (ec) {
-    case EC_UNKNOWN: interrupt(tf); break;
+    case EC_UNKNOWN:
+        interrupt(tf);
+        break;
     case EC_SVC64:
         if (!iss) {
             /* Jump to syscall to handle the system call from user process */
@@ -67,12 +64,9 @@ trap(struct trapframe* tf)
             cprintf("trap: unexpected svc iss 0x%x\n", iss);
         }
         break;
-    default: panic("\ttrap: unexpected irq.\n");
+    default:
+        panic("\ttrap: unexpected irq.\n");
     }
 }
 
-void
-irq_error(uint64_t type)
-{
-    panic("\tirq_error: irq of type %d unimplemented.\n", type);
-}
+void irq_error(uint64_t type) { panic("\tirq_error: irq of type %d unimplemented.\n", type); }

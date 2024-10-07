@@ -16,8 +16,7 @@ struct {
     struct file file[NFILE];
 } ftable;
 
-void
-file_init()
+void file_init()
 {
     initlock(&ftable.lock, "ftable");
     cprintf("file_init: success.\n");
@@ -26,8 +25,7 @@ file_init()
 /*
  * Allocate a file structure.
  */
-struct file*
-file_alloc()
+struct file* file_alloc()
 {
     acquire(&ftable.lock);
     for (struct file* f = ftable.file; f < ftable.file + NFILE; ++f) {
@@ -44,11 +42,11 @@ file_alloc()
 /*
  * Increment ref count for file f.
  */
-struct file*
-file_dup(struct file* f)
+struct file* file_dup(struct file* f)
 {
     acquire(&ftable.lock);
-    if (f->ref < 1) panic("\tfile_dup: invalid file.\n");
+    if (f->ref < 1)
+        panic("\tfile_dup: invalid file.\n");
     f->ref++;
     release(&ftable.lock);
     return f;
@@ -57,11 +55,11 @@ file_dup(struct file* f)
 /*
  * Close file f. (Decrement ref count, close when reaches 0.)
  */
-void
-file_close(struct file* f)
+void file_close(struct file* f)
 {
     acquire(&ftable.lock);
-    if (f->ref < 1) panic("\tfile_close: invalid file.\n");
+    if (f->ref < 1)
+        panic("\tfile_close: invalid file.\n");
     if (--f->ref > 0) {
         release(&ftable.lock);
         return;
@@ -84,8 +82,7 @@ file_close(struct file* f)
 /*
  * Get metadata about file f.
  */
-int
-file_stat(struct file* f, struct stat* st)
+int file_stat(struct file* f, struct stat* st)
 {
     if (f->type == FD_INODE) {
         ilock(f->ip);
@@ -99,14 +96,15 @@ file_stat(struct file* f, struct stat* st)
 /*
  * Read from file f.
  */
-ssize_t
-file_read(struct file* f, char* addr, ssize_t n)
+ssize_t file_read(struct file* f, char* addr, ssize_t n)
 {
-    if (!f->readable) return -1;
+    if (!f->readable)
+        return -1;
     if (f->type == FD_INODE) {
         ilock(f->ip);
         int r = readi(f->ip, addr, f->off, n);
-        if (r > 0) f->off += r;
+        if (r > 0)
+            f->off += r;
         iunlock(f->ip);
         return r;
     }
@@ -117,10 +115,10 @@ file_read(struct file* f, char* addr, ssize_t n)
 /*
  * Write to file f.
  */
-ssize_t
-file_write(struct file* f, char* addr, ssize_t n)
+ssize_t file_write(struct file* f, char* addr, ssize_t n)
 {
-    if (!f->writable) return -1;
+    if (!f->writable)
+        return -1;
     if (f->type == FD_INODE) {
         // Write a few blocks at a time to avoid exceeding the maximum log
         // transaction size, including i-node, indirect block, allocation
@@ -131,17 +129,21 @@ file_write(struct file* f, char* addr, ssize_t n)
         int i = 0;
         while (i < n) {
             int n1 = n - i;
-            if (n1 > max) n1 = max;
+            if (n1 > max)
+                n1 = max;
 
             begin_op();
             ilock(f->ip);
             int r = writei(f->ip, addr + i, f->off, n1);
-            if (r > 0) f->off += r;
+            if (r > 0)
+                f->off += r;
             iunlock(f->ip);
             end_op();
 
-            if (r < 0) break;
-            if (r != n1) panic("\tfile_write: partial data written.\n");
+            if (r < 0)
+                break;
+            if (r != n1)
+                panic("\tfile_write: partial data written.\n");
             i += r;
         }
         return i == n ? n : -1;

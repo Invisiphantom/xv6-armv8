@@ -18,14 +18,18 @@ int sys_exec() {
         cprintf("sys_exec: invalid arguments.\n");
         return -1;
     }
+
     cprintf("sys_exec: exec '%s' uargv %lld\n", path, uargv);
 
+    // 开始解析参数
     memset(argv, 0, sizeof(argv));
     for (int i = 0;; ++i) {
         if (i >= ARRAY_SIZE(argv)) {
             cprintf("sys_exec: too many arguments.\n");
             return -1;
         }
+
+        
         if (fetchint(uargv + sizeof(uint64_t) * i, &uarg) < 0) {
             cprintf("sys_exec: failed to fetch uarg.\n");
             return -1;
